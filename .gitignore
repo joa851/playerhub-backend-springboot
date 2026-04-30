@@ -1,0 +1,115 @@
+# ──────────────────────────────────────────────
+# Maven
+# ──────────────────────────────────────────────
+**/target/
+**/pom.xml.tag
+**/pom.xml.releaseBackup
+**/pom.xml.versionsBackup
+**/pom.xml.next
+**/release.properties
+**/dependency-reduced-pom.xml
+**/buildNumber.properties
+**/.mvn/timing.properties
+**/mvn-debug-pid
+
+# Keep the Maven wrapper scripts but not the jar
+**/mvnw
+!**/mvnw
+**/mvnw.cmd
+!**/mvnw.cmd
+**/.mvn/wrapper/maven-wrapper.jar
+
+# ──────────────────────────────────────────────
+# Spring Boot / Spring Cloud generated files
+# ──────────────────────────────────────────────
+HELP.md
+spring-shell.log
+
+# ──────────────────────────────────────────────
+# Eclipse / Spring Tools Suite (STS)
+# ──────────────────────────────────────────────
+.metadata/
+RemoteSystemsTempFiles/
+*.tmp
+*.bak
+*.swp
+*~.nib
+local.properties
+.settings/
+.loadpath
+.recommenders
+.apt_generated
+.apt_generated_test
+.classpath
+.factorypath
+.project
+.springBeans
+.sts4-cache
+.buildpath
+*.launch
+
+# ──────────────────────────────────────────────
+# IntelliJ IDEA
+# ──────────────────────────────────────────────
+.idea/
+*.iws
+*.iml
+*.ipr
+out/
+
+# ──────────────────────────────────────────────
+# VS Code
+# ──────────────────────────────────────────────
+.vscode/
+
+# ──────────────────────────────────────────────
+# macOS
+# ──────────────────────────────────────────────
+.DS_Store
+.AppleDouble
+.LSOverride
+Icon
+._*
+.Spotlight-V100
+.Trashes
+.fseventsd
+
+# ──────────────────────────────────────────────
+# Logs & runtime artifacts
+# ──────────────────────────────────────────────
+*.log
+*.log.*
+logs/
+/tmp/
+
+# ──────────────────────────────────────────────
+# Secrets / config sensible
+# ──────────────────────────────────────────────
+**/application-local*.yml
+**/application-local*.yaml
+**/application-local*.properties
+**/*.keystore
+**/*.jks
+**/*.p12
+**/*.pem
+**/*.crt
+**/*.key
+.env
+.env.*
+
+# ──────────────────────────────────────────────
+# Docker (si se agrega después)
+# ──────────────────────────────────────────────
+docker-compose.override.yml
+
+# ──────────────────────────────────────────────
+# NetBeans
+# ──────────────────────────────────────────────
+/nbproject/private/
+/nbbuild/
+/dist/
+/nbdist/
+/.nb-gradle/
+build/
+!**/src/main/**/build/
+!**/src/test/**/build/
