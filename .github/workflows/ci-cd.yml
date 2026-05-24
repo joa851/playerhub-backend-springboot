@@ -1,0 +1,221 @@
+name: CI/CD - Spring Boot Backend
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  id-token: write          # imprescindible para Workload Identity Federation
+  pull-requests: write     # para que Sonar comente PRs
+
+env:
+  JAVA_VERSION: '17'
+  JAVA_DISTRIBUTION: 'temurin'
+
+jobs:
+  # ─────────────────────────────────────────────────────────────────────
+  # 1. Build + tests por servicio (en paralelo, matrix de 3)
+  # ─────────────────────────────────────────────────────────────────────
+  build-test:
+    name: Build & Test (${{ matrix.service }})
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        service: [configserver, eurekaserver, player]
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0   # Sonar necesita historial completo para blame
+
+      - name: Set up JDK ${{ env.JAVA_VERSION }}
+        uses: actions/setup-java@v4
+        with:
+          java-version: ${{ env.JAVA_VERSION }}
+          distribution: ${{ env.JAVA_DISTRIBUTION }}
+          cache: maven
+
+      - name: Build & Test
+        working-directory: ${{ matrix.service }}
+        run: ./mvnw -B -ntp verify
+
+      - name: Upload jar
+        uses: actions/upload-artifact@v4
+        with:
+          name: ${{ matrix.service }}-jar
+          path: ${{ matrix.service }}/target/*.jar
+          if-no-files-found: error
+          retention-days: 7
+
+      - name: Upload test & coverage reports
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: ${{ matrix.service }}-reports
+          path: |
+            ${{ matrix.service }}/target/site/jacoco/
+            ${{ matrix.service }}/target/surefire-reports/
+            ${{ matrix.service }}/target/classes/
+            ${{ matrix.service }}/target/test-classes/
+          if-no-files-found: warn
+          retention-days: 7
+
+  # ─────────────────────────────────────────────────────────────────────
+  # 2. Análisis estático con SonarCloud (un único proyecto, 3 módulos)
+  # ─────────────────────────────────────────────────────────────────────
+  sonar:
+    name: SonarCloud analysis
+    needs: build-test
+    runs-on: ubuntu-latest
+    # En PRs desde forks no se puede pasar el SONAR_TOKEN: solo escaneamos
+    # PRs del propio repo y pushes.
+    if: github.event_name != 'pull_request' || github.event.pull_request.head.repo.full_name == github.repository
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Set up JDK ${{ env.JAVA_VERSION }}
+        uses: actions/setup-java@v4
+        with:
+          java-version: ${{ env.JAVA_VERSION }}
+          distribution: ${{ env.JAVA_DISTRIBUTION }}
+
+      - name: Download all reports
+        uses: actions/download-artifact@v4
+        with:
+          path: _artifacts
+          pattern: '*-reports'
+
+      - name: Reorganize reports into each module's target/
+        run: |
+          for svc in configserver eurekaserver player; do
+            mkdir -p "$svc/target"
+            if [ -d "_artifacts/$svc-reports/$svc/target" ]; then
+              cp -r "_artifacts/$svc-reports/$svc/target/"* "$svc/target/"
+            fi
+          done
+          echo '--- jacoco xmls encontrados ---'
+          find . -name jacoco.xml -not -path './_artifacts/*' || true
+
+      - name: SonarCloud Scan
+        uses: SonarSource/sonarqube-scan-action@v3
+        env:
+          SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
+
+  # ─────────────────────────────────────────────────────────────────────
+  # 3. Build + push de la imagen Docker (solo push a main)
+  # ─────────────────────────────────────────────────────────────────────
+  docker:
+    name: Docker build & push (${{ matrix.service }})
+    needs: build-test
+    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        service: [configserver, eurekaserver, player]
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Download jar
+        uses: actions/download-artifact@v4
+        with:
+          name: ${{ matrix.service }}-jar
+          path: ${{ matrix.service }}/target
+
+      - name: Compute image tag
+        id: tag
+        run: echo "tag=sha-${GITHUB_SHA::7}" >> "$GITHUB_OUTPUT"
+
+      - name: Authenticate to Google Cloud
+        uses: google-github-actions/auth@v2
+        with:
+          workload_identity_provider: ${{ vars.GCP_WIF_PROVIDER }}
+          service_account: ${{ vars.GCP_DEPLOYER_SA }}
+
+      - name: Set up gcloud
+        uses: google-github-actions/setup-gcloud@v2
+
+      - name: Configure Docker for Artifact Registry
+        run: gcloud auth configure-docker ${{ vars.GCP_REGION }}-docker.pkg.dev --quiet
+
+      - name: Build image
+        run: |
+          docker build \
+            --build-arg SERVICE=${{ matrix.service }} \
+            -t ${{ vars.GCP_ARTIFACT_REGISTRY }}/${{ matrix.service }}:${{ steps.tag.outputs.tag }} \
+            -t ${{ vars.GCP_ARTIFACT_REGISTRY }}/${{ matrix.service }}:latest \
+            .
+
+      - name: Push image
+        run: |
+          docker push ${{ vars.GCP_ARTIFACT_REGISTRY }}/${{ matrix.service }}:${{ steps.tag.outputs.tag }}
+          docker push ${{ vars.GCP_ARTIFACT_REGISTRY }}/${{ matrix.service }}:latest
+
+  # ─────────────────────────────────────────────────────────────────────
+  # 4. Despliegue a Cloud Run (solo push a main)
+  # ─────────────────────────────────────────────────────────────────────
+  deploy:
+    name: Deploy to Cloud Run (${{ matrix.service }})
+    needs: docker
+    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - service: configserver
+            env_vars: "SPRING_CLOUD_CONFIG_SERVER_GIT_URI=https://github.com/joa851/playerhub-backend-springboot"
+            secrets: ""
+          - service: eurekaserver
+            env_vars: ""
+            secrets: ""
+          - service: player
+            env_vars: "SPRING_DATASOURCE_URL=jdbc:postgresql://34.60.145.174:5432/playerhub,SPRING_DATASOURCE_USERNAME=playerhub"
+            secrets: "SPRING_DATASOURCE_PASSWORD=playerhub-pg-password:latest,API_FOOTBALL_KEY=playerhub-api-football-key:latest"
+    steps:
+      - name: Authenticate to Google Cloud
+        uses: google-github-actions/auth@v2
+        with:
+          workload_identity_provider: ${{ vars.GCP_WIF_PROVIDER }}
+          service_account: ${{ vars.GCP_DEPLOYER_SA }}
+
+      - name: Set up gcloud
+        uses: google-github-actions/setup-gcloud@v2
+
+      - name: Deploy to Cloud Run
+        run: |
+          ARGS=(
+            run deploy playerhub-${{ matrix.service }}
+            --image=${{ vars.GCP_ARTIFACT_REGISTRY }}/${{ matrix.service }}:sha-${GITHUB_SHA::7}
+            --region=${{ vars.GCP_REGION }}
+            --service-account=${{ vars.GCP_RUNTIME_SA }}
+            --allow-unauthenticated
+            --port=8080
+            --cpu=1
+            --memory=512Mi
+            --max-instances=2
+            --quiet
+          )
+          if [ -n "${{ matrix.env_vars }}" ]; then
+            ARGS+=(--update-env-vars="${{ matrix.env_vars }}")
+          fi
+          if [ -n "${{ matrix.secrets }}" ]; then
+            ARGS+=(--update-secrets="${{ matrix.secrets }}")
+          fi
+          gcloud "${ARGS[@]}"
+
+      - name: Print service URL
+        run: |
+          URL=$(gcloud run services describe playerhub-${{ matrix.service }} \
+            --region=${{ vars.GCP_REGION }} \
+            --format='value(status.url)')
+          echo "::notice title=Service URL::playerhub-${{ matrix.service }} → $URL"
