@@ -95,14 +95,21 @@ jobs:
 
       - name: Reorganize reports into each module's target/
         run: |
+          # upload-artifact@v4 trunca el prefijo común cuando se le pasan
+          # varios paths. Por eso dentro del artifact los ficheros viven en
+          # target/... y no en <svc>/target/...
           for svc in configserver eurekaserver player; do
             mkdir -p "$svc/target"
-            if [ -d "_artifacts/$svc-reports/$svc/target" ]; then
-              cp -r "_artifacts/$svc-reports/$svc/target/"* "$svc/target/"
+            if [ -d "_artifacts/$svc-reports/target" ]; then
+              cp -r "_artifacts/$svc-reports/target/"* "$svc/target/"
+            else
+              echo "::warning::no se encontró _artifacts/$svc-reports/target"
             fi
           done
           echo '--- jacoco xmls encontrados ---'
           find . -name jacoco.xml -not -path './_artifacts/*' || true
+          echo '--- target/classes presentes ---'
+          ls -d */target/classes 2>/dev/null || true
 
       - name: SonarCloud Scan
         uses: SonarSource/sonarqube-scan-action@v3
