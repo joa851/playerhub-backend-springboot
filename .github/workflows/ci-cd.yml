@@ -95,15 +95,18 @@ jobs:
 
       - name: Reorganize reports into each module's target/
         run: |
-          # upload-artifact@v4 trunca el prefijo común cuando se le pasan
-          # varios paths. Por eso dentro del artifact los ficheros viven en
-          # target/... y no en <svc>/target/...
+          # upload-artifact@v4 toma como raíz del archivo el "common
+          # ancestor" de los paths subidos. Como todos cuelgan de
+          # <svc>/target/, el contenido del artifact es directamente
+          # site/, surefire-reports/, classes/ y test-classes/.
+          echo '--- contenido descargado ---'
+          ls -la _artifacts/ || true
           for svc in configserver eurekaserver player; do
+            echo "--- _artifacts/$svc-reports ---"
+            ls -la "_artifacts/$svc-reports" 2>/dev/null || echo "(missing)"
             mkdir -p "$svc/target"
-            if [ -d "_artifacts/$svc-reports/target" ]; then
-              cp -r "_artifacts/$svc-reports/target/"* "$svc/target/"
-            else
-              echo "::warning::no se encontró _artifacts/$svc-reports/target"
+            if [ -d "_artifacts/$svc-reports" ]; then
+              cp -r "_artifacts/$svc-reports/"* "$svc/target/" 2>/dev/null || true
             fi
           done
           echo '--- jacoco xmls encontrados ---'
