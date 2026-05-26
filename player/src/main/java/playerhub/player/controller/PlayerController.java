@@ -5,6 +5,7 @@ import java.util.List;
 import java.util.Optional;
 
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.format.annotation.DateTimeFormat;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
@@ -31,6 +32,16 @@ public class PlayerController {
 
 	@Autowired
 	PlayerService playerService;
+
+	// Inyectado desde el Config Server (player.properties en el repo de configs).
+	@Value("${app.welcome-message:welcome (fallback)}")
+	private String welcomeMessage;
+
+	@Operation(summary = "Mensaje de bienvenida (servido por el Config Server)")
+	@GetMapping("/welcome")
+	public ResponseEntity<String> welcome() {
+		return ResponseEntity.ok(welcomeMessage);
+	}
 
 	// CRUD local
 

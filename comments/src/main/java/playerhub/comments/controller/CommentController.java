@@ -4,6 +4,7 @@ import java.util.List;
 import java.util.Optional;
 
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.DeleteMapping;
@@ -28,6 +29,16 @@ public class CommentController {
 
 	@Autowired
 	CommentService commentService;
+
+	// Inyectado desde el Config Server (comments.properties en el repo de configs).
+	@Value("${app.welcome-message:welcome (fallback)}")
+	private String welcomeMessage;
+
+	@Operation(summary = "Mensaje de bienvenida (servido por el Config Server)")
+	@GetMapping("/welcome")
+	public ResponseEntity<String> welcome() {
+		return ResponseEntity.ok(welcomeMessage);
+	}
 
 	@Operation(summary = "Lista comentarios. Filtro opcional por playerId.")
 	@GetMapping("/")

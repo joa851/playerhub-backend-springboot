@@ -183,16 +183,16 @@ jobs:
       matrix:
         include:
           - service: configserver
-            env_vars: "SPRING_CLOUD_CONFIG_SERVER_GIT_URI=https://github.com/joa851/playerhub-backend-springboot"
+            env_vars: "SPRING_CLOUD_CONFIG_SERVER_GIT_URI=https://github.com/joa851/playerhub-backend-springboot-config"
             secrets: ""
           - service: eurekaserver
             env_vars: ""
             secrets: ""
           - service: player
-            env_vars: "SPRING_DATASOURCE_URL=jdbc:postgresql://34.60.145.174:5432/playerhub,SPRING_DATASOURCE_USERNAME=playerhub,COMMENTS_SERVICE_URL=https://playerhub-comments-jbpcjhx2eq-uc.a.run.app,LLM_MODEL=gemini-2.0-flash-001"
+            env_vars: "SPRING_DATASOURCE_URL=jdbc:postgresql://34.60.145.174:5432/playerhub,SPRING_DATASOURCE_USERNAME=playerhub,COMMENTS_SERVICE_URL=https://playerhub-comments-jbpcjhx2eq-uc.a.run.app,LLM_MODEL=gemini-2.0-flash-001,EUREKA_CLIENT_ENABLED=true,EUREKA_DEFAULT_ZONE=https://playerhub-eurekaserver-jbpcjhx2eq-uc.a.run.app/eureka,CONFIG_SERVER_URL=https://playerhub-configserver-jbpcjhx2eq-uc.a.run.app"
             secrets: "SPRING_DATASOURCE_PASSWORD=playerhub-pg-password:latest,API_FOOTBALL_KEY=playerhub-api-football-key:latest,LLM_KEY=playerhub-llm-key:latest"
           - service: comments
-            env_vars: "SPRING_DATASOURCE_URL=jdbc:postgresql://34.60.145.174:5432/playerhub,SPRING_DATASOURCE_USERNAME=playerhub"
+            env_vars: "SPRING_DATASOURCE_URL=jdbc:postgresql://34.60.145.174:5432/playerhub,SPRING_DATASOURCE_USERNAME=playerhub,EUREKA_CLIENT_ENABLED=true,EUREKA_DEFAULT_ZONE=https://playerhub-eurekaserver-jbpcjhx2eq-uc.a.run.app/eureka,CONFIG_SERVER_URL=https://playerhub-configserver-jbpcjhx2eq-uc.a.run.app"
             secrets: "SPRING_DATASOURCE_PASSWORD=playerhub-pg-password:latest"
     steps:
       - name: Authenticate to Google Cloud
