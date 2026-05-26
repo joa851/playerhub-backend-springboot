@@ -1,21 +1,31 @@
 package playerhub.player.domain;
 
+import java.time.Instant;
+
+import org.hibernate.annotations.CreationTimestamp;
+
 import jakarta.persistence.AttributeOverride;
 import jakarta.persistence.AttributeOverrides;
 import jakarta.persistence.Column;
 import jakarta.persistence.Embedded;
 import jakarta.persistence.Entity;
+import jakarta.persistence.GeneratedValue;
+import jakarta.persistence.GenerationType;
 import jakarta.persistence.Id;
 
 @Entity
 public class Player {
 	@Id
+	@GeneratedValue(strategy = GenerationType.IDENTITY)
 	private Long id;
+
+	private Long externalId;
+
 	private String name;
 	private String firstname;
 	private String lastname;
 	private Integer age;
-	
+
 	@Embedded
 	@AttributeOverrides({
 	    @AttributeOverride(name = "date", column = @Column(name = "birth_date")),
@@ -30,8 +40,26 @@ public class Player {
 	private String position;
 	private String photo;
 
+	private String team;
+	private String league;
+
+	@Embedded
+	@AttributeOverrides({
+	    @AttributeOverride(name = "latitude", column = @Column(name = "location_latitude")),
+	    @AttributeOverride(name = "longitude", column = @Column(name = "location_longitude"))
+	})
+	private Location location;
+
+	@CreationTimestamp
+	@Column(name = "created_at", updatable = false)
+	private Instant createdAt;
+
 	public Long getId() {
 		return id;
+	}
+
+	public Long getExternalId() {
+		return externalId;
 	}
 
 	public String getName() {
@@ -78,8 +106,28 @@ public class Player {
 		return photo;
 	}
 
+	public String getTeam() {
+		return team;
+	}
+
+	public String getLeague() {
+		return league;
+	}
+
+	public Location getLocation() {
+		return location;
+	}
+
+	public Instant getCreatedAt() {
+		return createdAt;
+	}
+
 	public void setId(Long id) {
 		this.id = id;
+	}
+
+	public void setExternalId(Long externalId) {
+		this.externalId = externalId;
 	}
 
 	public void setName(String name) {
@@ -124,5 +172,21 @@ public class Player {
 
 	public void setPhoto(String photo) {
 		this.photo = photo;
+	}
+
+	public void setTeam(String team) {
+		this.team = team;
+	}
+
+	public void setLeague(String league) {
+		this.league = league;
+	}
+
+	public void setLocation(Location location) {
+		this.location = location;
+	}
+
+	public void setCreatedAt(Instant createdAt) {
+		this.createdAt = createdAt;
 	}
 }

@@ -1,11 +1,20 @@
 package playerhub.player.controller;
 
+import java.time.Instant;
+import java.util.List;
 import java.util.Optional;
 
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.format.annotation.DateTimeFormat;
+import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
+import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
+import org.springframework.web.bind.annotation.PostMapping;
+import org.springframework.web.bind.annotation.PutMapping;
+import org.springframework.web.bind.annotation.RequestBody;
+import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 
 import playerhub.player.domain.Player;
@@ -20,9 +29,16 @@ public class PlayerController {
 	@Autowired
 	PlayerService playerService;
 
+	// CRUD local
+
 	@GetMapping("/")
-	public ResponseEntity<Player[]> getPlayers() {
-		Player[] players = playerService.getAllPlayers();
+	public ResponseEntity<List<Player>> getPlayers(
+			@RequestParam(required = false) String name,
+			@RequestParam(required = false) String team,
+			@RequestParam(required = false) String league,
+			@RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE_TIME) Instant from,
+			@RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE_TIME) Instant to) {
+		List<Player> players = playerRepository.search(name, team, league, from, to);
 		return ResponseEntity.ok(players);
 	}
 
@@ -34,5 +50,60 @@ public class PlayerController {
 			return ResponseEntity.ok(player.get());
 		}
 		return ResponseEntity.notFound().build();
+	}
+
+	@PostMapping("/")
+	public ResponseEntity<Player> createPlayer(@RequestBody Player player) {
+		player.setId(null);
+		Player saved = playerRepository.save(player);
+		return ResponseEntity.status(HttpStatus.CREATED).body(saved);
+	}
+
+	@PutMapping("/{id}")
+	public ResponseEntity<Player> updatePlayer(@PathVariable Long id, @RequestBody Player player) {
+		if (!playerRepository.existsById(id)) {
+			return ResponseEntity.notFound().build();
+		}
+		player.setId(id);
+		Player saved = playerRepository.save(player);
+		return ResponseEntity.ok(saved);
+	}
+
+	@DeleteMapping("/{id}")
+	public ResponseEntity<Void> deletePlayer(@PathVariable Long id) {
+		if (!playerRepository.existsById(id)) {
+			return ResponseEntity.notFound().build();
+		}
+		playerRepository.deleteById(id);
+		return ResponseEntity.noContent().build();
+	}
+
+	//Crud API
+
+	@GetMapping("/external")
+	public ResponseEntity<Player[]> searchExternal(@RequestParam String query) {
+		return ResponseEntity.ok(playerService.searchExternal(query));
+	}
+
+	@PostMapping("/external/import")
+	public ResponseEntity<List<Player>> importExternal(@RequestBody List<Long> ids) {
+		List<Player> imported = playerService.importExternal(ids);
+		return ResponseEntity.status(HttpStatus.CREATED).body(imported);
+	}
+
+	//TODO
+
+	@PostMapping("/ideal-team")
+	public ResponseEntity<List<Player>> idealTeam() {
+		return ResponseEntity.ok(playerService.idealTeam());
+	}
+	//TODO
+	@GetMapping("/{id}/comments")
+	public ResponseEntity<List<Object>> getComments(@PathVariable Long id) {
+		List<Object> comments = playerService.getComments(id);
+		if (comments == null) {
+			return ResponseEntity.notFound().build();
+		}
+		return ResponseEntity.ok(comments);
 	}
 }
