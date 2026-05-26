@@ -31,6 +31,10 @@ public class PlayerController {
 
 	// CRUD local
 
+	// Postgres no acepta cast bytea→timestamptz cuando el param es null, así
+	// que aquí mandamos sentinels: EPOCH (1970) y una fecha lejana.
+	private static final Instant FAR_FUTURE = Instant.parse("9999-12-31T23:59:59Z");
+
 	@GetMapping("/")
 	public ResponseEntity<List<Player>> getPlayers(
 			@RequestParam(required = false) String name,
@@ -38,7 +42,9 @@ public class PlayerController {
 			@RequestParam(required = false) String league,
 			@RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE_TIME) Instant from,
 			@RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE_TIME) Instant to) {
-		List<Player> players = playerRepository.search(name, team, league, from, to);
+		Instant fromOrEpoch = from != null ? from : Instant.EPOCH;
+		Instant toOrFuture = to != null ? to : FAR_FUTURE;
+		List<Player> players = playerRepository.search(name, team, league, fromOrEpoch, toOrFuture);
 		return ResponseEntity.ok(players);
 	}
 
