@@ -13,6 +13,7 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.stereotype.Service;
 import org.springframework.web.client.RestTemplate;
 
+import playerhub.player.client.CommentClient;
 import playerhub.player.domain.ApiResponse;
 import playerhub.player.domain.Player;
 import playerhub.player.domain.PlayerWrapper;
@@ -26,6 +27,9 @@ public class PlayerService {
 
     @Autowired
     private PlayerRepository playerRepository;
+
+    @Autowired
+    private CommentClient commentClient;
 
     @Value("${api.football.base-url}")
     private String apiUrl;
@@ -84,16 +88,16 @@ public class PlayerService {
     }
 
     /**
-     * Devuelve los comentarios de un jugador. Placeholder hasta tener
-     * Feign al microservicio de comments.
+     * Devuelve los comentarios de un jugador llamando al microservicio
+     * comments vía Feign. Si el player no existe localmente, devuelve null
+     * (el controller lo traducirá a 404).
      */
     public List<Object> getComments(Long playerId) {
-        // TODO: Feign al microservicio comments.
         Optional<Player> player = playerRepository.findById(playerId);
         if (player.isEmpty()) {
             return null;
         }
-        return new ArrayList<>();
+        return commentClient.findByPlayerId(playerId);
     }
 
     private ResponseEntity<ApiResponse> callApiFootball(String url) {

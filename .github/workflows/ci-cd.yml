@@ -189,7 +189,7 @@ jobs:
             env_vars: ""
             secrets: ""
           - service: player
-            env_vars: "SPRING_DATASOURCE_URL=jdbc:postgresql://34.60.145.174:5432/playerhub,SPRING_DATASOURCE_USERNAME=playerhub"
+            env_vars: "SPRING_DATASOURCE_URL=jdbc:postgresql://34.60.145.174:5432/playerhub,SPRING_DATASOURCE_USERNAME=playerhub,COMMENTS_SERVICE_URL=https://playerhub-comments-jbpcjhx2eq-uc.a.run.app"
             secrets: "SPRING_DATASOURCE_PASSWORD=playerhub-pg-password:latest,API_FOOTBALL_KEY=playerhub-api-football-key:latest"
           - service: comments
             env_vars: "SPRING_DATASOURCE_URL=jdbc:postgresql://34.60.145.174:5432/playerhub,SPRING_DATASOURCE_USERNAME=playerhub"
