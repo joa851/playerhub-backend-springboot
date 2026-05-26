@@ -26,7 +26,7 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        service: [configserver, eurekaserver, player]
+        service: [configserver, eurekaserver, player, comments]
     steps:
       - name: Checkout
         uses: actions/checkout@v4
@@ -101,7 +101,7 @@ jobs:
           # site/, surefire-reports/, classes/ y test-classes/.
           echo '--- contenido descargado ---'
           ls -la _artifacts/ || true
-          for svc in configserver eurekaserver player; do
+          for svc in configserver eurekaserver player comments; do
             echo "--- _artifacts/$svc-reports ---"
             ls -la "_artifacts/$svc-reports" 2>/dev/null || echo "(missing)"
             mkdir -p "$svc/target"
@@ -130,7 +130,7 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        service: [configserver, eurekaserver, player]
+        service: [configserver, eurekaserver, player, comments]
     steps:
       - name: Checkout
         uses: actions/checkout@v4
@@ -191,6 +191,9 @@ jobs:
           - service: player
             env_vars: "SPRING_DATASOURCE_URL=jdbc:postgresql://34.60.145.174:5432/playerhub,SPRING_DATASOURCE_USERNAME=playerhub"
             secrets: "SPRING_DATASOURCE_PASSWORD=playerhub-pg-password:latest,API_FOOTBALL_KEY=playerhub-api-football-key:latest"
+          - service: comments
+            env_vars: "SPRING_DATASOURCE_URL=jdbc:postgresql://34.60.145.174:5432/playerhub,SPRING_DATASOURCE_USERNAME=playerhub"
+            secrets: "SPRING_DATASOURCE_PASSWORD=playerhub-pg-password:latest"
     steps:
       - name: Authenticate to Google Cloud
         uses: google-github-actions/auth@v2
