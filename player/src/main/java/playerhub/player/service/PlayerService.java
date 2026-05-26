@@ -31,6 +31,9 @@ public class PlayerService {
     @Autowired
     private CommentClient commentClient;
 
+    @Autowired
+    private LLMService llmService;
+
     @Value("${api.football.base-url}")
     private String apiUrl;
 
@@ -80,11 +83,22 @@ public class PlayerService {
     }
 
     /**
-     * Genera un "Equipo Ideal" con LLM (Groq / Google AI). Placeholder por ahora.
+     * Genera un "Equipo Ideal" con Gemini.
+     * Pasa todos los jugadores de la BD local al LLM, que devuelve los IDs
+     * seleccionados. Luego recuperamos las entidades para devolverlas
+     * completas al cliente.
      */
     public List<Player> idealTeam() {
-        // TODO: integrar LLM (Groq / Google AI Studio).
-        return new ArrayList<>();
+        List<Player> all = (List<Player>) playerRepository.findAll();
+        if (all.isEmpty()) {
+            return new ArrayList<>();
+        }
+        List<Long> selectedIds = llmService.selectIdealTeamIds(all);
+        List<Player> team = new ArrayList<>();
+        for (Long id : selectedIds) {
+            playerRepository.findById(id).ifPresent(team::add);
+        }
+        return team;
     }
 
     /**
