@@ -97,13 +97,15 @@ public class PlayerController {
 		return ResponseEntity.status(HttpStatus.CREATED).body(imported);
 	}
 
-	//TODO
+	// LLM (Gemini) → "Equipo Ideal"
 
 	@PostMapping("/ideal-team")
 	public ResponseEntity<List<Player>> idealTeam() {
 		return ResponseEntity.ok(playerService.idealTeam());
 	}
-	//TODO
+
+	// Feign → microservicio comments
+
 	@GetMapping("/{id}/comments")
 	public ResponseEntity<List<Object>> getComments(@PathVariable Long id) {
 		List<Object> comments = playerService.getComments(id);
