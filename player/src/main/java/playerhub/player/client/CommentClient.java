@@ -8,10 +8,6 @@ import org.springframework.web.bind.annotation.RequestParam;
 
 /**
  * Cliente Feign al microservicio comments.
- *
- * Hoy usa URL directa (sub-bloque C). Cuando Eureka esté activo
- * (sub-bloque D) se quita el "url" y Feign + LoadBalancer resuelven
- * el nombre "comments" contra el registry.
  */
 @FeignClient(name = "comments", url = "${comments.service.url:http://localhost:8082}")
 public interface CommentClient {

@@ -24,7 +24,7 @@ import playerhub.player.domain.Player;
  * Cliente del LLM (Google Gemini vía AI Studio) para generar el "Equipo Ideal".
  *
  * Construye un prompt con los jugadores disponibles, pide a Gemini que
- * seleccione 11 IDs en formato JSON estricto, y devuelve la lista de IDs.
+ * seleccione 11 IDs en formato JSON, y devuelve la lista de IDs.
  */
 @Service
 public class LLMService {

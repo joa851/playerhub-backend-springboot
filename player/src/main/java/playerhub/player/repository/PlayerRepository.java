@@ -18,10 +18,6 @@ public interface PlayerRepository extends CrudRepository<Player, Long> {
 
 	public Optional<Player> findByExternalId(Long externalId);
 
-	// Notas:
-	// - Strings: CAST AS String para que Postgres deduzca el tipo cuando viene null.
-	// - Instant from/to: NO usamos IS NULL aquí; el controller manda Instant.EPOCH /
-	//   fecha lejana cuando faltan. Postgres no acepta cast bytea→timestamptz.
 	@Query("SELECT p FROM Player p WHERE "
 		+ "(CAST(:name AS String) IS NULL OR LOWER(p.name) LIKE LOWER(CONCAT('%', CAST(:name AS String), '%'))) AND "
 		+ "(CAST(:team AS String) IS NULL OR p.team = CAST(:team AS String)) AND "

@@ -14,11 +14,14 @@ import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 
+import io.swagger.v3.oas.annotations.Operation;
+import io.swagger.v3.oas.annotations.tags.Tag;
 import playerhub.comments.domain.Comment;
 import playerhub.comments.repository.CommentRepository;
 import playerhub.comments.service.CommentService;
 
 @RestController
+@Tag(name = "Comments", description = "CRUD de comentarios sobre jugadores")
 public class CommentController {
 	@Autowired
 	CommentRepository commentRepository;
@@ -26,6 +29,7 @@ public class CommentController {
 	@Autowired
 	CommentService commentService;
 
+	@Operation(summary = "Lista comentarios. Filtro opcional por playerId.")
 	@GetMapping("/")
 	public ResponseEntity<List<Comment>> getComments(@RequestParam(required = false) Long playerId) {
 		if (playerId != null) {
@@ -35,6 +39,7 @@ public class CommentController {
 		return ResponseEntity.ok(all);
 	}
 
+	@Operation(summary = "Devuelve un comentario por su id")
 	@GetMapping("/{id}")
 	public ResponseEntity<Comment> getComment(@PathVariable Long id) {
 		Optional<Comment> comment = commentRepository.findById(id);
@@ -45,6 +50,7 @@ public class CommentController {
 		return ResponseEntity.notFound().build();
 	}
 
+	@Operation(summary = "Crea un comentario (autor, texto, rating 0-5, geolocalización)")
 	@PostMapping("/")
 	public ResponseEntity<Comment> createComment(@RequestBody Comment comment) {
 		comment.setId(null);
@@ -52,6 +58,7 @@ public class CommentController {
 		return ResponseEntity.status(HttpStatus.CREATED).body(saved);
 	}
 
+	@Operation(summary = "Borra un comentario por id (admin)")
 	@DeleteMapping("/{id}")
 	public ResponseEntity<Void> deleteComment(@PathVariable Long id) {
 		if (!commentRepository.existsById(id)) {

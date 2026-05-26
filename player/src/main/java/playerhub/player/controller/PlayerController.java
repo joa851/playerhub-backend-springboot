@@ -17,11 +17,14 @@ import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 
+import io.swagger.v3.oas.annotations.Operation;
+import io.swagger.v3.oas.annotations.tags.Tag;
 import playerhub.player.domain.Player;
 import playerhub.player.repository.PlayerRepository;
 import playerhub.player.service.PlayerService;
 
 @RestController
+@Tag(name = "Players", description = "CRUD local + búsqueda/import API-Football + LLM + comments")
 public class PlayerController {
 	@Autowired
 	PlayerRepository playerRepository;
@@ -31,10 +34,10 @@ public class PlayerController {
 
 	// CRUD local
 
-	// Postgres no acepta cast bytea→timestamptz cuando el param es null, así
-	// que aquí mandamos sentinels: EPOCH (1970) y una fecha lejana.
+	// Postgres no acepta cast cuando el param es null, así que se mandan fechas lejanas.
 	private static final Instant FAR_FUTURE = Instant.parse("9999-12-31T23:59:59Z");
 
+	@Operation(summary = "Lista jugadores locales con filtros opcionales (nombre, equipo, liga, fechas)")
 	@GetMapping("/")
 	public ResponseEntity<List<Player>> getPlayers(
 			@RequestParam(required = false) String name,
@@ -48,6 +51,7 @@ public class PlayerController {
 		return ResponseEntity.ok(players);
 	}
 
+	@Operation(summary = "Devuelve un jugador por su id local")
 	@GetMapping("/{id}")
 	public ResponseEntity<Player> getPlayer(@PathVariable Long id) {
 		Optional<Player> player = playerRepository.findById(id);
@@ -58,6 +62,7 @@ public class PlayerController {
 		return ResponseEntity.notFound().build();
 	}
 
+	@Operation(summary = "Crea un jugador desde formulario (con geolocalización)")
 	@PostMapping("/")
 	public ResponseEntity<Player> createPlayer(@RequestBody Player player) {
 		player.setId(null);
@@ -65,6 +70,7 @@ public class PlayerController {
 		return ResponseEntity.status(HttpStatus.CREATED).body(saved);
 	}
 
+	@Operation(summary = "Actualiza un jugador existente (admin)")
 	@PutMapping("/{id}")
 	public ResponseEntity<Player> updatePlayer(@PathVariable Long id, @RequestBody Player player) {
 		if (!playerRepository.existsById(id)) {
@@ -75,6 +81,7 @@ public class PlayerController {
 		return ResponseEntity.ok(saved);
 	}
 
+	@Operation(summary = "Borra un jugador por id local (admin)")
 	@DeleteMapping("/{id}")
 	public ResponseEntity<Void> deletePlayer(@PathVariable Long id) {
 		if (!playerRepository.existsById(id)) {
@@ -86,26 +93,26 @@ public class PlayerController {
 
 	//Crud API
 
+	@Operation(summary = "Busca jugadores en API-Football (no toca la BD local)")
 	@GetMapping("/external")
 	public ResponseEntity<Player[]> searchExternal(@RequestParam String query) {
 		return ResponseEntity.ok(playerService.searchExternal(query));
 	}
 
+	@Operation(summary = "Importa a la BD local los jugadores seleccionados (por id externo)")
 	@PostMapping("/external/import")
 	public ResponseEntity<List<Player>> importExternal(@RequestBody List<Long> ids) {
 		List<Player> imported = playerService.importExternal(ids);
 		return ResponseEntity.status(HttpStatus.CREATED).body(imported);
 	}
 
-	// LLM (Gemini) → "Equipo Ideal"
-
+	@Operation(summary = "Genera el 'Equipo Ideal' usando Gemini sobre los jugadores de la BD")
 	@PostMapping("/ideal-team")
 	public ResponseEntity<List<Player>> idealTeam() {
 		return ResponseEntity.ok(playerService.idealTeam());
 	}
 
-	// Feign → microservicio comments
-
+	@Operation(summary = "Devuelve los comentarios de un jugador (vía Feign al microservicio comments)")
 	@GetMapping("/{id}/comments")
 	public ResponseEntity<List<Object>> getComments(@PathVariable Long id) {
 		List<Object> comments = playerService.getComments(id);
