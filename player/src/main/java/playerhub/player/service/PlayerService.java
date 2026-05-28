@@ -67,7 +67,8 @@ public class PlayerService {
             if (playerRepository.findByExternalId(extId).isPresent()) {
                 continue;
             }
-            ResponseEntity<ApiResponse> response = callApiFootball(apiUrl + "?id=" + extId);
+            // API-Football usa el query param `player` para id lookup, no `id`.
+            ResponseEntity<ApiResponse> response = callApiFootball(apiUrl + "?player=" + extId);
             ApiResponse body = response.getBody();
             if (body == null || body.getResponse() == null || body.getResponse().isEmpty()) {
                 continue;
