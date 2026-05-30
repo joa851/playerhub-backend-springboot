@@ -90,9 +90,6 @@ public class LLMService {
     }
 
     private Map<String, Object> buildRequestBody(String prompt) {
-        // Estructura mínima exigida por el endpoint generateContent de Gemini:
-        // { "contents": [ { "parts": [ {"text": "..."} ] } ],
-        //   "generationConfig": { "responseMimeType": "application/json" } }
         Map<String, Object> part = Map.of("text", prompt);
         Map<String, Object> content = Map.of("parts", List.of(part));
         Map<String, Object> generationConfig = new HashMap<>();
@@ -104,11 +101,6 @@ public class LLMService {
         return body;
     }
 
-    /**
-     * La respuesta de Gemini tiene esta forma:
-     * { "candidates": [ { "content": { "parts": [ { "text": "<JSON>" } ] } } ] }
-     * Y dentro del text:  { "team": [1, 2, 3, ...] }
-     */
     private List<Long> extractTeamIds(String responseBody) {
         try {
             JsonNode root = json.readTree(responseBody);
@@ -129,7 +121,7 @@ public class LLMService {
             }
             return ids;
         } catch (Exception e) {
-            // Respuesta inesperada: devuelve lista vacía en lugar de petar.
+            // Respuesta inesperada: devuelve lista vacía.
             return new ArrayList<>();
         }
     }
