@@ -1,5 +1,6 @@
 package playerhub.player.service;
 
+import java.time.Instant;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
@@ -24,6 +25,10 @@ import playerhub.player.repository.PlayerRepository;
 @Service
 public class PlayerService {
 
+    /** Postgres no acepta cast cuando el param es null, así que se mandan
+     *  fechas extremas como sentinela en lugar de null. */
+    private static final Instant FAR_FUTURE = Instant.parse("9999-12-31T23:59:59Z");
+
     @Autowired
     private RestTemplate restTemplate;
 
@@ -41,6 +46,51 @@ public class PlayerService {
 
     @Value("${api.football.key}")
     private String apiKey;
+
+    // ─── CRUD local ────────────────────────────────────────────────────
+
+    /**
+     * Lista jugadores aplicando los filtros opcionales recibidos. Si from
+     * o to son null, los sustituye por EPOCH / FAR_FUTURE para que el
+     * query SQL nunca reciba null en parámetros de fecha.
+     */
+    public List<Player> search(String name, String team, String league, Instant from, Instant to) {
+        Instant fromOrEpoch = from != null ? from : Instant.EPOCH;
+        Instant toOrFuture = to != null ? to : FAR_FUTURE;
+        return playerRepository.search(name, team, league, fromOrEpoch, toOrFuture);
+    }
+
+    /** Crea un jugador nuevo. Garantiza id=null para que JPA autogenere. */
+    public Player create(Player player) {
+        player.setId(null);
+        return playerRepository.save(player);
+    }
+
+    /**
+     * Actualiza un jugador existente. Devuelve Optional.empty si el id
+     * no existe (el controller lo traducirá a 404).
+     */
+    public Optional<Player> update(Long id, Player player) {
+        if (!playerRepository.existsById(id)) {
+            return Optional.empty();
+        }
+        player.setId(id);
+        return Optional.of(playerRepository.save(player));
+    }
+
+    /**
+     * Borra un jugador por id. Devuelve true si existía y se borró,
+     * false si no existía (404 en el controller).
+     */
+    public boolean delete(Long id) {
+        if (!playerRepository.existsById(id)) {
+            return false;
+        }
+        playerRepository.deleteById(id);
+        return true;
+    }
+
+    // ─── API-Football ──────────────────────────────────────────────────
 
     /**
      * Busca jugadores en API-Football por nombre. No toca la BD.

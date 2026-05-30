@@ -22,17 +22,19 @@ import org.springframework.web.bind.annotation.RestController;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import playerhub.player.domain.Player;
-import playerhub.player.repository.PlayerRepository;
 import playerhub.player.service.PlayerService;
 
+/**
+ * Controller del microservicio player. Toda la lógica (incluido el CRUD
+ * trivial) pasa por PlayerService. El controller se limita a traducir
+ * HTTP ↔ llamadas al service.
+ */
 @RestController
 @Tag(name = "Players", description = "CRUD local + búsqueda/import API-Football + LLM + comments")
 public class PlayerController {
-	@Autowired
-	PlayerRepository playerRepository;
 
 	@Autowired
-	PlayerService playerService;
+	private PlayerService playerService;
 
 	// Inyectado desde el Config Server (player.properties en el repo de configs).
 	@Value("${app.welcome-message:welcome (fallback)}")
@@ -44,10 +46,7 @@ public class PlayerController {
 		return ResponseEntity.ok(welcomeMessage);
 	}
 
-	// CRUD local
-
-	// Postgres no acepta cast cuando el param es null, así que se mandan fechas lejanas.
-	private static final Instant FAR_FUTURE = Instant.parse("9999-12-31T23:59:59Z");
+	// ─── CRUD local ────────────────────────────────────────────────────
 
 	@Operation(summary = "Lista jugadores locales con filtros opcionales (nombre, equipo, liga, fechas)")
 	@GetMapping("/")
@@ -57,53 +56,43 @@ public class PlayerController {
 			@RequestParam(required = false) String league,
 			@RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE_TIME) Instant from,
 			@RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE_TIME) Instant to) {
-		Instant fromOrEpoch = from != null ? from : Instant.EPOCH;
-		Instant toOrFuture = to != null ? to : FAR_FUTURE;
-		List<Player> players = playerRepository.search(name, team, league, fromOrEpoch, toOrFuture);
-		return ResponseEntity.ok(players);
+		return ResponseEntity.ok(playerService.search(name, team, league, from, to));
 	}
 
 	@Operation(summary = "Devuelve un jugador por su id local, con sus comments embebidos (vía Feign)")
 	@GetMapping("/{id}")
 	public ResponseEntity<Player> getPlayer(@PathVariable Long id) {
 		Optional<Player> player = playerService.findByIdWithComments(id);
-
-		if (player.isPresent()) {
-			return ResponseEntity.ok(player.get());
-		}
-		return ResponseEntity.notFound().build();
+		return player
+			.map(ResponseEntity::ok)
+			.orElseGet(() -> ResponseEntity.notFound().build());
 	}
 
 	@Operation(summary = "Crea un jugador desde formulario (con geolocalización)")
 	@PostMapping("/")
 	public ResponseEntity<Player> createPlayer(@RequestBody Player player) {
-		player.setId(null);
-		Player saved = playerRepository.save(player);
+		Player saved = playerService.create(player);
 		return ResponseEntity.status(HttpStatus.CREATED).body(saved);
 	}
 
 	@Operation(summary = "Actualiza un jugador existente (admin)")
 	@PutMapping("/{id}")
 	public ResponseEntity<Player> updatePlayer(@PathVariable Long id, @RequestBody Player player) {
-		if (!playerRepository.existsById(id)) {
-			return ResponseEntity.notFound().build();
-		}
-		player.setId(id);
-		Player saved = playerRepository.save(player);
-		return ResponseEntity.ok(saved);
+		return playerService.update(id, player)
+			.map(ResponseEntity::ok)
+			.orElseGet(() -> ResponseEntity.notFound().build());
 	}
 
 	@Operation(summary = "Borra un jugador por id local (admin)")
 	@DeleteMapping("/{id}")
 	public ResponseEntity<Void> deletePlayer(@PathVariable Long id) {
-		if (!playerRepository.existsById(id)) {
+		if (!playerService.delete(id)) {
 			return ResponseEntity.notFound().build();
 		}
-		playerRepository.deleteById(id);
 		return ResponseEntity.noContent().build();
 	}
 
-	//Crud API
+	// ─── API-Football ──────────────────────────────────────────────────
 
 	@Operation(summary = "Busca jugadores en API-Football (no toca la BD local)")
 	@GetMapping("/external")
@@ -123,6 +112,8 @@ public class PlayerController {
 	public ResponseEntity<List<Player>> idealTeam() {
 		return ResponseEntity.ok(playerService.idealTeam());
 	}
+
+	// ─── Comments (proxy vía Feign) ────────────────────────────────────
 
 	@Operation(summary = "Devuelve los comentarios de un jugador (vía Feign al microservicio comments)")
 	@GetMapping("/{id}/comments")

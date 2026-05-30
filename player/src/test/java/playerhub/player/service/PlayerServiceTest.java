@@ -1,5 +1,6 @@
 package playerhub.player.service;
 
+import java.time.Instant;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
@@ -52,6 +53,94 @@ class PlayerServiceTest {
         p.setId(id);
         p.setName(name);
         return p;
+    }
+
+    // ─── CRUD local ────────────────────────────────────────────────────
+
+    @Test
+    void search_withNullDates_usesEpochAndFarFutureSentinels() {
+        when(playerRepository.search(eq("p"), eq(null), eq(null), any(Instant.class), any(Instant.class)))
+            .thenReturn(List.of(player(1L, "Pedri")));
+
+        List<Player> result = playerService.search("p", null, null, null, null);
+
+        assertThat(result).hasSize(1);
+        // Verifica que el service NUNCA pasa null al repo en los Instants
+        verify(playerRepository).search(eq("p"), eq(null), eq(null),
+            eq(Instant.EPOCH),
+            eq(Instant.parse("9999-12-31T23:59:59Z")));
+    }
+
+    @Test
+    void search_withProvidedDates_passesThemThrough() {
+        Instant from = Instant.parse("2024-01-01T00:00:00Z");
+        Instant to = Instant.parse("2025-12-31T23:59:59Z");
+        when(playerRepository.search(any(), any(), any(), eq(from), eq(to)))
+            .thenReturn(new ArrayList<>());
+
+        playerService.search(null, null, null, from, to);
+
+        verify(playerRepository).search(null, null, null, from, to);
+    }
+
+    @Test
+    void create_setsIdToNullAndSaves() {
+        Player input = player(42L, "Yamal");   // id que NO debería respetarse
+        when(playerRepository.save(any(Player.class))).thenAnswer(inv -> {
+            Player p = inv.getArgument(0);
+            p.setId(99L);                       // JPA simula autogenerar otro id
+            return p;
+        });
+
+        Player result = playerService.create(input);
+
+        assertThat(result.getId()).isEqualTo(99L);
+        assertThat(result.getName()).isEqualTo("Yamal");
+        // El id del input quedó forzado a null antes del save
+        assertThat(input.getId()).isEqualTo(99L);   // mismo objeto, ya con id JPA
+    }
+
+    @Test
+    void update_playerMissing_returnsEmpty() {
+        when(playerRepository.existsById(99L)).thenReturn(false);
+
+        Optional<Player> result = playerService.update(99L, player(null, "x"));
+
+        assertThat(result).isEmpty();
+        verify(playerRepository, never()).save(any());
+    }
+
+    @Test
+    void update_playerExists_setsIdAndSaves() {
+        when(playerRepository.existsById(7L)).thenReturn(true);
+        Player payload = player(null, "Updated");
+        when(playerRepository.save(payload)).thenReturn(payload);
+
+        Optional<Player> result = playerService.update(7L, payload);
+
+        assertThat(result).isPresent();
+        assertThat(result.get().getId()).isEqualTo(7L);    // forzado al id de la URL
+        assertThat(result.get().getName()).isEqualTo("Updated");
+    }
+
+    @Test
+    void delete_playerMissing_returnsFalse() {
+        when(playerRepository.existsById(99L)).thenReturn(false);
+
+        boolean result = playerService.delete(99L);
+
+        assertThat(result).isFalse();
+        verify(playerRepository, never()).deleteById(any());
+    }
+
+    @Test
+    void delete_playerExists_deletesAndReturnsTrue() {
+        when(playerRepository.existsById(7L)).thenReturn(true);
+
+        boolean result = playerService.delete(7L);
+
+        assertThat(result).isTrue();
+        verify(playerRepository).deleteById(7L);
     }
 
     // ─── findByIdWithComments ──────────────────────────────────────────
