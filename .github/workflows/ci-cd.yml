@@ -189,7 +189,7 @@ jobs:
             env_vars: ""
             secrets: ""
           - service: player
-            env_vars: "EUREKA_CLIENT_ENABLED=true,EUREKA_DEFAULT_ZONE=https://playerhub-eurekaserver-jbpcjhx2eq-uc.a.run.app/eureka,CONFIG_SERVER_URL=https://playerhub-configserver-jbpcjhx2eq-uc.a.run.app"
+            env_vars: "EUREKA_CLIENT_ENABLED=true,EUREKA_DEFAULT_ZONE=https://playerhub-eurekaserver-jbpcjhx2eq-uc.a.run.app/eureka,CONFIG_SERVER_URL=https://playerhub-configserver-jbpcjhx2eq-uc.a.run.app,COMMENTS_SERVICE_URL=https://playerhub-comments-jbpcjhx2eq-uc.a.run.app"
             secrets: "SPRING_DATASOURCE_PASSWORD=playerhub-pg-password:latest,API_FOOTBALL_KEY=playerhub-api-football-key:latest,LLM_KEY=playerhub-llm-key:latest"
           - service: comments
             env_vars: "EUREKA_CLIENT_ENABLED=true,EUREKA_DEFAULT_ZONE=https://playerhub-eurekaserver-jbpcjhx2eq-uc.a.run.app/eureka,CONFIG_SERVER_URL=https://playerhub-configserver-jbpcjhx2eq-uc.a.run.app"
