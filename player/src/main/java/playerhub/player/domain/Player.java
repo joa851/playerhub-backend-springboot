@@ -1,8 +1,12 @@
 package playerhub.player.domain;
 
 import java.time.Instant;
+import java.util.List;
+import java.util.Map;
 
 import org.hibernate.annotations.CreationTimestamp;
+
+import com.fasterxml.jackson.annotation.JsonInclude;
 
 import jakarta.persistence.AttributeOverride;
 import jakarta.persistence.AttributeOverrides;
@@ -12,6 +16,7 @@ import jakarta.persistence.Entity;
 import jakarta.persistence.GeneratedValue;
 import jakarta.persistence.GenerationType;
 import jakarta.persistence.Id;
+import jakarta.persistence.Transient;
 
 @Entity
 public class Player {
@@ -53,6 +58,24 @@ public class Player {
 	@CreationTimestamp
 	@Column(name = "created_at", updatable = false)
 	private Instant createdAt;
+
+	/**
+	 * Comentarios del jugador. No se persiste en esta tabla (viven en
+	 * el microservicio "comments"); el PlayerService lo rellena vía
+	 * Feign antes de devolver el objeto al cliente. Se omite del JSON
+	 * cuando es null para no contaminar otros endpoints.
+	 */
+	@Transient
+	@JsonInclude(JsonInclude.Include.NON_NULL)
+	private List<Map<String, Object>> comments;
+
+	public List<Map<String, Object>> getComments() {
+		return comments;
+	}
+
+	public void setComments(List<Map<String, Object>> comments) {
+		this.comments = comments;
+	}
 
 	public Long getId() {
 		return id;

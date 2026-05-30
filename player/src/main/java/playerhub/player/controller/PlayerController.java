@@ -2,6 +2,7 @@ package playerhub.player.controller;
 
 import java.time.Instant;
 import java.util.List;
+import java.util.Map;
 import java.util.Optional;
 
 import org.springframework.beans.factory.annotation.Autowired;
@@ -62,10 +63,10 @@ public class PlayerController {
 		return ResponseEntity.ok(players);
 	}
 
-	@Operation(summary = "Devuelve un jugador por su id local")
+	@Operation(summary = "Devuelve un jugador por su id local, con sus comments embebidos (vía Feign)")
 	@GetMapping("/{id}")
 	public ResponseEntity<Player> getPlayer(@PathVariable Long id) {
-		Optional<Player> player = playerRepository.findById(id);
+		Optional<Player> player = playerService.findByIdWithComments(id);
 
 		if (player.isPresent()) {
 			return ResponseEntity.ok(player.get());
@@ -125,11 +126,35 @@ public class PlayerController {
 
 	@Operation(summary = "Devuelve los comentarios de un jugador (vía Feign al microservicio comments)")
 	@GetMapping("/{id}/comments")
-	public ResponseEntity<List<Object>> getComments(@PathVariable Long id) {
-		List<Object> comments = playerService.getComments(id);
+	public ResponseEntity<List<Map<String, Object>>> getComments(@PathVariable Long id) {
+		List<Map<String, Object>> comments = playerService.getComments(id);
 		if (comments == null) {
 			return ResponseEntity.notFound().build();
 		}
 		return ResponseEntity.ok(comments);
+	}
+
+	@Operation(summary = "Añade un comentario a un jugador (proxy vía Feign al microservicio comments)")
+	@PostMapping("/{id}/comments")
+	public ResponseEntity<Map<String, Object>> addComment(
+			@PathVariable Long id,
+			@RequestBody Map<String, Object> comment) {
+		Map<String, Object> created = playerService.addComment(id, comment);
+		if (created == null) {
+			return ResponseEntity.notFound().build();
+		}
+		return ResponseEntity.status(HttpStatus.CREATED).body(created);
+	}
+
+	@Operation(summary = "Borra un comentario por id (admin, proxy vía Feign al microservicio comments)")
+	@DeleteMapping("/{id}/comments/{commentId}")
+	public ResponseEntity<Void> deleteComment(
+			@PathVariable Long id,
+			@PathVariable Long commentId) {
+		boolean ok = playerService.deleteComment(id, commentId);
+		if (!ok) {
+			return ResponseEntity.notFound().build();
+		}
+		return ResponseEntity.noContent().build();
 	}
 }
